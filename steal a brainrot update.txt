@@ -1,0 +1,113 @@
+local ts = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
+local lp = game.Players.LocalPlayer
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+
+local Window = Library:NewWindow("Credits: TGMANKASKE")
+local Section = Window:NewSection("Boosts")
+
+local savedPos = nil
+
+Section:CreateButton("Boost Speed", function()
+	local player = game.Players.LocalPlayer
+	local humanoid = player.Character.Humanoid
+	humanoid.WalkSpeed = 42
+end)
+
+Section:CreateButton("Boost Jump", function()
+	local players = game:GetService("Players")
+	local lp = players.LocalPlayer
+
+	local jumpPower = 72
+
+	local function applyJump()
+		local char = lp.Character
+		if not char then return end
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.UseJumpPower = true
+			humanoid.JumpPower = jumpPower
+		end
+	end
+
+	game:GetService("RunService").RenderStepped:Connect(function()
+		applyJump()
+	end)
+
+	lp.CharacterAdded:Connect(function()
+		repeat wait() until lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+		wait(0.5)
+	end)
+end)
+
+local speed = 38
+
+local Section = Window:NewSection("Teleports")
+
+Section:CreateButton("Save Base Position", function()
+	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		savedPos = hrp.Position
+	end
+end)
+
+Section:CreateButton("Go to Saved Position", function()
+	local char = lp.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+	if savedPos and hrp and humanoid then
+		humanoid.UseJumpPower = true
+		humanoid.JumpPower = 77 -- pulo mais alto
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+
+		task.wait(0.1)
+
+		local distance = (hrp.Position - savedPos).Magnitude
+		local duration = distance / speed
+
+		local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+		local cf = CFrame.new(savedPos + Vector3.new(0, 8, 0)) -- voo mais alto também
+		local tween = ts:Create(hrp, tweenInfo, {CFrame = cf})
+		tween:Play()
+	end
+end)
+
+local Section = Window:NewSection("Extras")
+
+Section:CreateButton("Server Hope", function()
+	local module = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeoKholYt/roblox/main/lk_serverhop.lua"))()
+	module:Teleport(game.PlaceId)
+end)
+
+Section:CreateButton("Rejoin", function()
+	local player = game.Players.LocalPlayer
+	local gamePlaceId = game.PlaceId
+	local teleportService = game:GetService("TeleportService")
+	teleportService:Teleport(gamePlaceId, player)
+end)
+
+local Window = Library:NewWindow("See my team")
+local Section = Window:NewSection("Team")
+
+Section:CreateButton("TGMANKASKE", function()
+	print("tgmankaske")
+end)
+
+Section:CreateButton("Davitrollz", function()
+	print("Davitrollz")
+end)
+
+local Section = Window:NewSection("Links")
+
+Section:CreateButton("Discord Group", function()
+	print("Davitrollz")
+	setclipboard("https://discord.gg/8A6k73JqCM")
+	toclipboard("https://discord.gg/8A6k73JqCM")
+end)
+
+Section:CreateButton("Youtube", function()
+	print("Davitrollz")
+	setclipboard("https://www.youtube.com/@TGMANKASKE")
+	toclipboard("https://www.youtube.com/@TGMANKASKE")
+end)
