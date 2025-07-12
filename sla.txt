@@ -1,95 +1,56 @@
 local ts = game:GetService("TweenService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
+local lp = game.Players.LocalPlayer
 
-local lp = Players.LocalPlayer
-
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 local Window = Library:NewWindow("Credits: TGMANKASKE")
-
 local Section = Window:NewSection("Boosts")
 
--- BOOST SPEED
-Section:CreateButton("Boost Speed", function()
-    local desiredSpeed = 48
-    local function applySpeed(humanoid)
-        humanoid.WalkSpeed = desiredSpeed
-        humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-            if humanoid.WalkSpeed ~= desiredSpeed then
-                humanoid.WalkSpeed = desiredSpeed
-            end
-        end)
-    end
-
-    local function onCharacterAdded(character)
-        local humanoid = character:WaitForChild("Humanoid")
-        applySpeed(humanoid)
-    end
-
-    if lp.Character then
-        onCharacterAdded(lp.Character)
-    end
-
-    lp.CharacterAdded:Connect(onCharacterAdded)
-end)
-
--- BOOST JUMP
-Section:CreateButton("Boost Jump", function()
-    local jumpBoostPower = 62
-    local boostEnabled = true
-
-    local function onJumpRequest()
-        if boostEnabled and lp.Character and lp.Character:FindFirstChild("Humanoid") then
-            local humanoid = lp.Character.Humanoid
-            if humanoid.FloorMaterial ~= Enum.Material.Air then
-                humanoid.JumpPower = jumpBoostPower
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-
-                delay(0.1, function()
-                    if humanoid then
-                        humanoid.JumpPower = 50
-                    end
-                end)
-            end
-        end
-    end
-
-    UserInputService.JumpRequest:Connect(onJumpRequest)
-end)
-
--- FLOAT (15s) MOBILE+PC
 Section:CreateButton("Float (15s) [Mobile+PC]", function()
-    local DURATION_SECONDS = 15
-    local FLOAT_HEIGHT = 6
-    local FLOAT_SPEED = 40
+    -- CONFIGURAÇÕES
+    local DURATION_SECONDS = 15         -- Tempo de flutuação
+    local FLOAT_HEIGHT = 6              -- Altura acima do chão
+    local FLOAT_SPEED = 40              -- Velocidade de movimentação
     local POSITION_FORCE = 25000
     local VELOCITY_FORCE = 25000
+
+    -- SERVIÇOS
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local player = Players.LocalPlayer
 
     local function setupFloat(character)
         local humanoid = character:WaitForChild("Humanoid")
         local hrp = character:WaitForChild("HumanoidRootPart")
 
+        -- Cria BodyPosition para manter no ar
         local bodyPos = Instance.new("BodyPosition")
         bodyPos.Name = "FloatPosition"
         bodyPos.P = 10000
         bodyPos.D = 1000
-        bodyPos.MaxForce = Vector3.new(0, POSITION_FORCE, 0)
+        bodyPos.MaxForce = Vector3.zero
         bodyPos.Position = hrp.Position
         bodyPos.Parent = hrp
 
+        -- Cria BodyVelocity para mover no ar
         local bodyVel = Instance.new("BodyVelocity")
         bodyVel.Name = "FloatVelocity"
         bodyVel.P = 1250
-        bodyVel.MaxForce = Vector3.new(VELOCITY_FORCE, 0, VELOCITY_FORCE)
-        bodyVel.Velocity = Vector3.new(0,0,0)
+        bodyVel.MaxForce = Vector3.zero
+        bodyVel.Velocity = Vector3.zero
         bodyVel.Parent = hrp
+
+        -- Ativa força vertical e horizontal
+        bodyPos.MaxForce = Vector3.new(0, POSITION_FORCE, 0)
+        bodyVel.MaxForce = Vector3.new(VELOCITY_FORCE, 0, VELOCITY_FORCE)
 
         local running = true
 
+        -- Atualiza posição e movimento a cada frame
         local conn = RunService.Heartbeat:Connect(function()
             if not running then return end
 
+            -- Calcula o solo abaixo
             local rayParams = RaycastParams.new()
             rayParams.FilterDescendantsInstances = {character}
             rayParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -102,10 +63,12 @@ Section:CreateButton("Float (15s) [Mobile+PC]", function()
 
             bodyPos.Position = Vector3.new(hrp.Position.X, targetY, hrp.Position.Z)
 
+            -- Move com direção atual do personagem (funciona no celular também)
             local moveDir = humanoid.MoveDirection
             bodyVel.Velocity = Vector3.new(moveDir.X, 0, moveDir.Z) * FLOAT_SPEED
         end)
 
+        -- Finaliza após o tempo
         task.delay(DURATION_SECONDS, function()
             running = false
             if conn then conn:Disconnect() end
@@ -113,6 +76,7 @@ Section:CreateButton("Float (15s) [Mobile+PC]", function()
             if bodyVel then bodyVel:Destroy() end
         end)
 
+        -- Remove se morrer
         humanoid.Died:Connect(function()
             running = false
             if conn then conn:Disconnect() end
@@ -121,50 +85,111 @@ Section:CreateButton("Float (15s) [Mobile+PC]", function()
         end)
     end
 
-    if lp.Character then
-        setupFloat(lp.Character)
+    -- Aplica no personagem atual
+    if player.Character then
+        setupFloat(player.Character)
     end
 
-    lp.CharacterAdded:Connect(function(char)
+    -- Reativa no respawn (se quiser que funcione novamente após morrer)
+    player.CharacterAdded:Connect(function(char)
         task.wait(0.5)
         setupFloat(char)
     end)
-end)
+end)local ts = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
+local lp = game.Players.LocalPlayer
 
--- TELEPORTS
-local SectionTeleport = Window:NewSection("Teleports")
+local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+local Window = Library:NewWindow("Credits: TGMANKASKE")
+local Section = Window:NewSection("Boosts")
 
-local savedPos = nil
-local speed = 38
+Section:CreateButton("Float (15s) [Mobile+PC]", function()
+    -- CONFIGURAÇÕES
+    local DURATION_SECONDS = 15         -- Tempo de flutuação
+    local FLOAT_HEIGHT = 6              -- Altura acima do chão
+    local FLOAT_SPEED = 40              -- Velocidade de movimentação
+    local POSITION_FORCE = 25000
+    local VELOCITY_FORCE = 25000
 
-SectionTeleport:CreateButton("Save Base Position", function()
-    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        savedPos = hrp.Position
-        print("Posição salva!")
+    -- SERVIÇOS
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local player = Players.LocalPlayer
+
+    local function setupFloat(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        local hrp = character:WaitForChild("HumanoidRootPart")
+
+        -- Cria BodyPosition para manter no ar
+        local bodyPos = Instance.new("BodyPosition")
+        bodyPos.Name = "FloatPosition"
+        bodyPos.P = 10000
+        bodyPos.D = 1000
+        bodyPos.MaxForce = Vector3.zero
+        bodyPos.Position = hrp.Position
+        bodyPos.Parent = hrp
+
+        -- Cria BodyVelocity para mover no ar
+        local bodyVel = Instance.new("BodyVelocity")
+        bodyVel.Name = "FloatVelocity"
+        bodyVel.P = 1250
+        bodyVel.MaxForce = Vector3.zero
+        bodyVel.Velocity = Vector3.zero
+        bodyVel.Parent = hrp
+
+        -- Ativa força vertical e horizontal
+        bodyPos.MaxForce = Vector3.new(0, POSITION_FORCE, 0)
+        bodyVel.MaxForce = Vector3.new(VELOCITY_FORCE, 0, VELOCITY_FORCE)
+
+        local running = true
+
+        -- Atualiza posição e movimento a cada frame
+        local conn = RunService.Heartbeat:Connect(function()
+            if not running then return end
+
+            -- Calcula o solo abaixo
+            local rayParams = RaycastParams.new()
+            rayParams.FilterDescendantsInstances = {character}
+            rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+            local ray = workspace:Raycast(hrp.Position, Vector3.new(0, -1000, 0), rayParams)
+            local targetY = hrp.Position.Y
+            if ray then
+                targetY = ray.Position.Y + FLOAT_HEIGHT
+            end
+
+            bodyPos.Position = Vector3.new(hrp.Position.X, targetY, hrp.Position.Z)
+
+            -- Move com direção atual do personagem (funciona no celular também)
+            local moveDir = humanoid.MoveDirection
+            bodyVel.Velocity = Vector3.new(moveDir.X, 0, moveDir.Z) * FLOAT_SPEED
+        end)
+
+        -- Finaliza após o tempo
+        task.delay(DURATION_SECONDS, function()
+            running = false
+            if conn then conn:Disconnect() end
+            if bodyPos then bodyPos:Destroy() end
+            if bodyVel then bodyVel:Destroy() end
+        end)
+
+        -- Remove se morrer
+        humanoid.Died:Connect(function()
+            running = false
+            if conn then conn:Disconnect() end
+            if bodyPos then bodyPos:Destroy() end
+            if bodyVel then bodyVel:Destroy() end
+        end)
     end
-end)
 
-SectionTeleport:CreateButton("Go to Saved Position", function()
-    local char = lp.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-
-    if savedPos and hrp and humanoid then
-        humanoid.UseJumpPower = true
-        humanoid.JumpPower = 77
-        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-
-        task.wait(0.1)
-
-        local distance = (hrp.Position - savedPos).Magnitude
-        local duration = distance / speed
-
-        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-        local cf = CFrame.new(savedPos + Vector3.new(0, 8, 0))
-        local tween = ts:Create(hrp, tweenInfo, {CFrame = cf})
-        tween:Play()
-    else
-        print("Posição salva não encontrada ou personagem inválido!")
+    -- Aplica no personagem atual
+    if player.Character then
+        setupFloat(player.Character)
     end
+
+    -- Reativa no respawn (se quiser que funcione novamente após morrer)
+    player.CharacterAdded:Connect(function(char)
+        task.wait(0.5)
+        setupFloat(char)
+    end)
 end)
