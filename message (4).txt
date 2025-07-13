@@ -1,0 +1,1161 @@
+local ts = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
+local lp = game.Players.LocalPlayer
+
+local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+local Window = Library:NewWindow("Credits: TGMANKASKE")
+local Section = Window:NewSection("Boosts")
+
+
+local savedPos = nil
+
+Section:CreateButton("Boost Speed", function()
+
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local desiredSpeed = 48
+
+    local function applySpeed(humanoid)
+        humanoid.WalkSpeed = desiredSpeed
+        humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+            if humanoid.WalkSpeed ~= desiredSpeed then
+                humanoid.WalkSpeed = desiredSpeed
+            end
+        end)
+    end
+
+    local function onCharacterAdded(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        applySpeed(humanoid)
+    end
+
+    if player.Character then
+        onCharacterAdded(player.Character)
+    end
+
+    player.CharacterAdded:Connect(onCharacterAdded)
+end)
+
+
+Section:CreateButton("Boost Jump", function()
+
+
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- Força extra do pulo (ajustável)
+local jumpBoostPower = 62  -- Valor maior = pulo mais forte
+
+local boostEnabled = true
+
+-- Função para aplicar boost no pulo
+local function onJumpRequest()
+    if boostEnabled and humanoid and humanoid.Parent then
+        -- Checa se está no chão antes de pular
+        if humanoid.FloorMaterial ~= Enum.Material.Air then
+            -- Aplica força extra no pulo
+            humanoid.JumpPower = jumpBoostPower
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            
+            -- Restaura JumpPower para o padrão depois (0.1 seg)
+            delay(0.1, function()
+                if humanoid then
+                    humanoid.JumpPower = 50 -- padrão Roblox é 50, ajuste se necessário
+                end
+            end)
+        end
+    end
+end
+
+-- Conecta o evento de pulo (pode ser via UserInputService ou Humanoid)
+UserInputService.JumpRequest:Connect(onJumpRequest)
+
+-- Função pra ligar/desligar o boost
+local function setBoostEnabled(enabled)
+    boostEnabled = enabled
+    if not enabled and humanoid then
+        humanoid.JumpPower = 50 -- volta ao normal
+    end
+end
+
+end)
+
+
+
+Section:CreateButton("Air Jump", function()
+
+local enabled = true -- ✅ true para ativar, false para desativar o AirJump
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- Impulso vertical configurável
+local jumpForce = 62
+
+-- Controla se o jogador está no ar
+local isJumping = false
+
+-- Detecta quando pular
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed or not enabled then return end
+	if input.KeyCode == Enum.KeyCode.Space then
+		if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+			-- AirJump: aplica impulso vertical manualmente (bypass)
+			hrp.Velocity = Vector3.new(hrp.Velocity.X, jumpForce, hrp.Velocity.Z)
+		end
+	end
+end)
+
+-- Atualiza referências após respawn
+player.CharacterAdded:Connect(function(newChar)
+	character = newChar
+	humanoid = newChar:WaitForChild("Humanoid")
+	hrp = newChar:WaitForChild("HumanoidRootPart")
+end)
+
+end)
+
+
+
+Section:CreateButton("Float Menu", function()
+
+
+-- CONFIGURAÇÕES INICIAIS
+local FLOAT_HEIGHT = 7
+local FLOAT_SPEED = 25
+local MIN_HEIGHT, MAX_HEIGHT = 2, 15
+local MIN_SPEED, MAX_SPEED = 12, 50
+local POSITION_FORCE = 25000
+local VELOCITY_FORCE = 25000
+
+-- SERVIÇOS
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- ESTADO
+local floating = false
+local bodyPos, bodyVel
+local floatConn
+local minimized = false
+
+-- INICIAR FLOAT
+local function startFloat(char)
+	local humanoid = char:WaitForChild("Humanoid")
+	local hrp = char:WaitForChild("HumanoidRootPart")
+
+	bodyPos = Instance.new("BodyPosition")
+	bodyPos.Name = "TimedFloatPosition"
+	bodyPos.P = 10000
+	bodyPos.D = 1000
+	bodyPos.MaxForce = Vector3.new(0, POSITION_FORCE, 0)
+	bodyPos.Position = hrp.Position
+	bodyPos.Parent = hrp
+
+	bodyVel = Instance.new("BodyVelocity")
+	bodyVel.Name = "TimedFloatVelocity"
+	bodyVel.P = 1250
+	bodyVel.MaxForce = Vector3.new(VELOCITY_FORCE, 0, VELOCITY_FORCE)
+	bodyVel.Velocity = Vector3.zero
+	bodyVel.Parent = hrp
+
+	floatConn = RunService.Heartbeat:Connect(function()
+		local rayParams = RaycastParams.new()
+		rayParams.FilterDescendantsInstances = {char}
+		rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+		local ray = workspace:Raycast(hrp.Position, Vector3.new(0, -1000, 0), rayParams)
+		local targetY = hrp.Position.Y
+		if ray then
+			targetY = ray.Position.Y + FLOAT_HEIGHT
+		end
+
+		bodyPos.Position = Vector3.new(hrp.Position.X, targetY, hrp.Position.Z)
+
+		local cam = workspace.CurrentCamera
+		local dir = Vector3.zero
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+		dir = Vector3.new(dir.X, 0, dir.Z)
+		bodyVel.Velocity = dir.Magnitude > 0 and dir.Unit * FLOAT_SPEED or Vector3.zero
+	end)
+
+	humanoid.Died:Connect(function()
+		stopFloat()
+	end)
+end
+
+-- PARAR FLOAT
+function stopFloat()
+	floating = false
+	if floatConn then floatConn:Disconnect() end
+	if bodyPos then bodyPos:Destroy() end
+	if bodyVel then bodyVel:Destroy() end
+	updateUI()
+end
+
+-- TOGGLE
+function toggleFloat()
+	floating = not floating
+	if floating then
+		if player.Character then
+			startFloat(player.Character)
+		end
+	else
+		stopFloat()
+	end
+	updateUI()
+end
+
+-- UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FloatMenuUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 280, 0, 200)
+frame.Position = UDim2.new(0, 100, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+-- TÍTULO
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -60, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "Float Menu"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Parent = frame
+
+-- BOTÃO MINIMIZAR
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+minimizeBtn.Position = UDim2.new(1, -60, 0, 0)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+minimizeBtn.Text = "–"
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 24
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.Parent = frame
+minimizeBtn.AutoButtonColor = true
+
+-- BOTÃO FECHAR
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -30, 0, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+closeBtn.Text = "X"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 20
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Parent = frame
+closeBtn.AutoButtonColor = true
+
+-- CONTEÚDO (para minimizar)
+local contentItems = {}
+
+local function addContent(child)
+	table.insert(contentItems, child)
+	child.Parent = frame
+end
+
+-- BOTÃO TOGGLE
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0.9, 0, 0, 40)
+toggleBtn.Position = UDim2.new(0.05, 0, 0, 40)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 18
+toggleBtn.Text = "Float: OFF"
+addContent(toggleBtn)
+toggleBtn.MouseButton1Click:Connect(toggleFloat)
+
+-- LABEL ALTURA
+local heightLabel = Instance.new("TextLabel")
+heightLabel.Size = UDim2.new(1, -20, 0, 20)
+heightLabel.Position = UDim2.new(0, 10, 0, 90)
+heightLabel.Text = "Altura: "..FLOAT_HEIGHT
+heightLabel.BackgroundTransparency = 1
+heightLabel.TextColor3 = Color3.new(1, 1, 1)
+heightLabel.Font = Enum.Font.Gotham
+heightLabel.TextSize = 16
+heightLabel.TextXAlignment = Enum.TextXAlignment.Left
+addContent(heightLabel)
+
+-- SLIDER ALTURA
+local heightSlider = Instance.new("TextButton")
+heightSlider.Size = UDim2.new(1, -20, 0, 20)
+heightSlider.Position = UDim2.new(0, 10, 0, 115)
+heightSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+heightSlider.AutoButtonColor = false
+heightSlider.Text = ""
+addContent(heightSlider)
+
+local heightFill = Instance.new("Frame")
+heightFill.Size = UDim2.new((FLOAT_HEIGHT - MIN_HEIGHT)/(MAX_HEIGHT - MIN_HEIGHT), 0, 1, 0)
+heightFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+heightFill.Parent = heightSlider
+
+-- LABEL VELOCIDADE
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(1, -20, 0, 20)
+speedLabel.Position = UDim2.new(0, 10, 0, 145)
+speedLabel.Text = "Velocidade: "..FLOAT_SPEED
+speedLabel.BackgroundTransparency = 1
+speedLabel.TextColor3 = Color3.new(1, 1, 1)
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.TextSize = 16
+speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+addContent(speedLabel)
+
+-- SLIDER VELOCIDADE
+local speedSlider = Instance.new("TextButton")
+speedSlider.Size = UDim2.new(1, -20, 0, 20)
+speedSlider.Position = UDim2.new(0, 10, 0, 170)
+speedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+speedSlider.AutoButtonColor = false
+speedSlider.Text = ""
+addContent(speedSlider)
+
+local speedFill = Instance.new("Frame")
+speedFill.Size = UDim2.new((FLOAT_SPEED - MIN_SPEED)/(MAX_SPEED - MIN_SPEED), 0, 1, 0)
+speedFill.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+speedFill.Parent = speedSlider
+
+-- FUNÇÃO PARA INTERPOLAR COR ENTRE VERMELHO E ROXO
+local function interpolateColor(pct)
+	if pct < 0.5 then
+		-- Do começo até meio: transição para vermelho
+		local t = pct / 0.5
+		return Color3.new(t, 0, 0) -- do preto (0,0,0) para vermelho (1,0,0)
+	else
+		-- Do meio até fim: transição para roxo (128,0,128)
+		local t = (pct - 0.5) / 0.5
+		return Color3.new(1 - 0.5*t, 0, 0 + 0.5*t) -- do vermelho (1,0,0) para roxo (0.5,0,0.5)
+	end
+end
+
+-- FUNÇÕES SLIDER
+local draggingHeight, draggingSpeed = false, false
+
+heightSlider.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingHeight = true end
+end)
+heightSlider.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingHeight = false end
+end)
+
+speedSlider.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSpeed = true end
+end)
+speedSlider.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSpeed = false end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if draggingHeight then
+		local mouse = UserInputService:GetMouseLocation().X
+		local x = math.clamp(mouse - heightSlider.AbsolutePosition.X, 0, heightSlider.AbsoluteSize.X)
+		local pct = x / heightSlider.AbsoluteSize.X
+		FLOAT_HEIGHT = math.floor(MIN_HEIGHT + pct * (MAX_HEIGHT - MIN_HEIGHT))
+		heightLabel.Text = "Altura: "..FLOAT_HEIGHT
+		heightFill.Size = UDim2.new(pct, 0, 1, 0)
+		heightFill.BackgroundColor3 = interpolateColor(pct)
+	end
+	if draggingSpeed then
+		local mouse = UserInputService:GetMouseLocation().X
+		local x = math.clamp(mouse - speedSlider.AbsolutePosition.X, 0, speedSlider.AbsoluteSize.X)
+		local pct = x / speedSlider.AbsoluteSize.X
+		FLOAT_SPEED = math.floor(MIN_SPEED + pct * (MAX_SPEED - MIN_SPEED))
+		speedLabel.Text = "Velocidade: "..FLOAT_SPEED
+		speedFill.Size = UDim2.new(pct, 0, 1, 0)
+		speedFill.BackgroundColor3 = interpolateColor(pct)
+	end
+end)
+
+-- ATUALIZA UI
+function updateUI()
+	toggleBtn.Text = floating and "Float: ON" or "Float: OFF"
+	toggleBtn.BackgroundColor3 = floating and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(60, 60, 60)
+end
+
+-- MINIMIZAR/RESTORE
+minimizeBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	if minimized then
+		for _, child in pairs(contentItems) do
+			local tween = TweenService:Create(child, TweenInfo.new(0.3), {BackgroundTransparency = 1, TextTransparency = 1})
+			tween:Play()
+			tween.Completed:Connect(function()
+				child.Visible = false
+			end)
+		end
+		local tweenSize = TweenService:Create(frame, TweenInfo.new(0.3), {Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset, 0, 30)})
+		tweenSize:Play()
+	else
+		for _, child in pairs(contentItems) do
+			child.Visible = true
+			local tween = TweenService:Create(child, TweenInfo.new(0.3), {BackgroundTransparency = 0, TextTransparency = 0})
+			tween:Play()
+		end
+		local tweenSize = TweenService:Create(frame, TweenInfo.new(0.3), {Size = UDim2.new(0, 280, 0, 200)})
+		tweenSize:Play()
+	end
+end)
+
+-- GUARDA CONEXÃO DA TECLA F PARA DESABILITAR DEPOIS
+local toggleKeyConn = UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.F then
+		toggleFloat()
+	end
+end)
+
+-- BOTÃO FECHAR (X) - PARA FLOAT, DESABILITA BIND E REMOVE GUI
+closeBtn.MouseButton1Click:Connect(function()
+	if floating then
+		stopFloat()
+	end
+	draggingHeight = false
+	draggingSpeed = false
+	if floatConn then
+		floatConn:Disconnect()
+		floatConn = nil
+	end
+	if toggleKeyConn then
+		toggleKeyConn:Disconnect()
+		toggleKeyConn = nil
+	end
+	local tween = TweenService:Create(frame, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+	tween:Play()
+	tween.Completed:Connect(function()
+		screenGui:Destroy()
+	end)
+end)
+
+-- TECLA DE ATALHO (F)
+-- (foi movido pra variável toggleKeyConn para poder desconectar)
+
+-- RESPAWN
+player.CharacterAdded:Connect(function(char)
+	char:WaitForChild("HumanoidRootPart")
+	wait(0.2)
+	if floating then
+		startFloat(char)
+	end
+end)
+
+-- Atualiza a UI inicial
+updateUI()
+
+
+
+end)
+
+
+
+Section:CreateButton("Fly Menu", function()
+
+-- [SERVICES]
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local flying = false
+local flySpeed = 50
+local minSpeed, maxSpeed = 10, 200
+
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- [BODYVELOCITY SETUP]
+local bodyVelocity = Instance.new("BodyVelocity")
+bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+
+-- [GUI BASE]
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FlyMenuGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 260, 0, 160)
+frame.Position = UDim2.new(0.5, -130, 0.5, -80)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+frame.Active = true
+frame.Selectable = true
+
+local draggingFrame = false
+local dragStartPos
+local frameStartPos
+
+-- [TÍTULO COM ARCO-ÍRIS]
+local title = Instance.new("TextLabel")
+title.Text = ".gg/esYJzYnsfC"
+title.Size = UDim2.new(1, -80, 0, 30)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 19
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextYAlignment = Enum.TextYAlignment.Center
+title.Parent = frame
+
+-- [BOTÃO DE MINIMIZAR]
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+minimizeBtn.Position = UDim2.new(1, -70, 0, 0)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 24
+minimizeBtn.Text = "–"
+minimizeBtn.Parent = frame
+
+-- [BOTÃO DE FECHAR]
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 24
+closeBtn.Text = "X"
+closeBtn.Parent = frame
+
+-- [ÁREA DE CONTEÚDO]
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1, 0, 1, -30)
+contentFrame.Position = UDim2.new(0, 0, 0, 30)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = frame
+
+-- [BOTÃO FLY ON/OFF]
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
+toggleBtn.Position = UDim2.new(0.05, 0, 0, 10)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.Gotham
+toggleBtn.TextSize = 20
+toggleBtn.Text = "Fly: OFF"
+toggleBtn.Parent = contentFrame
+
+-- [VELOCIDADE]
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(1, 0, 0, 25)
+speedLabel.Position = UDim2.new(0, 0, 0, 65)
+speedLabel.BackgroundTransparency = 1
+speedLabel.TextColor3 = Color3.new(1, 1, 1)
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.TextSize = 18
+speedLabel.Text = "Speed: "..flySpeed
+speedLabel.Parent = contentFrame
+
+-- [SLIDER]
+local sliderBg = Instance.new("Frame")
+sliderBg.Size = UDim2.new(0.9, 0, 0, 20)
+sliderBg.Position = UDim2.new(0.05, 0, 0, 95)
+sliderBg.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+sliderBg.Parent = contentFrame
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new((flySpeed - minSpeed)/(maxSpeed - minSpeed), 0, 1, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+sliderFill.Parent = sliderBg
+
+-- [ANIMAÇÕES DE COR DO SLIDER]
+local draggingSlider = false
+
+local function getColorForSpeed(speed)
+	local t = (speed - minSpeed) / (maxSpeed - minSpeed)
+	local localT
+	if t <= 0.5 then
+		localT = t / 0.5
+		return Color3.new(0 + 1*localT, 1 - 1*localT, 0)
+	else
+		localT = (t - 0.5) / 0.5
+		return Color3.new(1 - 0.3*localT, 0, 0.3*localT)
+	end
+end
+
+local function updateSliderAnimated(speed)
+	speed = math.clamp(speed, minSpeed, maxSpeed)
+	local percent = (speed - minSpeed) / (maxSpeed - minSpeed)
+	local color = getColorForSpeed(speed)
+	speedLabel.Text = "Speed: "..speed
+
+	TweenService:Create(sliderFill, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.new(percent, 0, 1, 0),
+		BackgroundColor3 = color
+	}):Play()
+end
+
+-- Inicializa slider com valor atual
+updateSliderAnimated(flySpeed)
+
+-- Slider controle
+sliderBg.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		draggingSlider = true
+	end
+end)
+sliderBg.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		draggingSlider = false
+	end
+end)
+sliderBg.InputChanged:Connect(function(input)
+	if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local relativeX = math.clamp(input.Position.X - sliderBg.AbsolutePosition.X, 0, sliderBg.AbsoluteSize.X)
+		local percent = relativeX / sliderBg.AbsoluteSize.X
+		flySpeed = math.floor(percent * (maxSpeed - minSpeed)) + minSpeed
+		updateSliderAnimated(flySpeed)
+	end
+end)
+
+-- Arrastar frame
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and not draggingSlider then
+		draggingFrame = true
+		dragStartPos = input.Position
+		frameStartPos = Vector2.new(frame.Position.X.Offset, frame.Position.Y.Offset)
+	end
+end)
+frame.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		draggingFrame = false
+	end
+end)
+frame.InputChanged:Connect(function(input)
+	if draggingFrame and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStartPos
+		local newX = math.clamp(frameStartPos.X + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - frame.AbsoluteSize.X)
+		local newY = math.clamp(frameStartPos.Y + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - frame.AbsoluteSize.Y)
+		local goal = UDim2.new(0, newX, 0, newY)
+		TweenService:Create(frame, TweenInfo.new(0.1), {Position = goal}):Play()
+	end
+end)
+
+-- Toggle Fly
+local function toggleFly()
+	flying = not flying
+	toggleBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+	bodyVelocity.Parent = flying and humanoidRootPart or nil
+
+	local goalColor = flying and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(55, 55, 55)
+	TweenService:Create(toggleBtn, TweenInfo.new(0.25), {BackgroundColor3 = goalColor}):Play()
+end
+toggleBtn.MouseButton1Click:Connect(toggleFly)
+
+-- Minimizar
+local minimized = false
+minimizeBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	local goalSize = minimized and UDim2.new(0, 260, 0, 30) or UDim2.new(0, 260, 0, 160)
+	contentFrame.Visible = not minimized
+	minimizeBtn.Text = minimized and "+" or "–"
+	TweenService:Create(frame, TweenInfo.new(0.25), {Size = goalSize}):Play()
+end)
+
+-- Fechar
+closeBtn.MouseButton1Click:Connect(function()
+	local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.new(0, 0, 0, 0)})
+	tween:Play()
+	tween.Completed:Connect(function()
+		screenGui:Destroy()
+	end)
+end)
+
+-- Arco-íris no título
+local hue = 0
+RunService.RenderStepped:Connect(function(dt)
+	hue = (hue + dt * 0.5) % 1
+	title.TextColor3 = Color3.fromHSV(hue, 1, 1)
+end)
+
+-- Atualiza personagem
+local function onCharacterAdded(char)
+	if bodyVelocity.Parent then
+		bodyVelocity.Parent = nil
+	end
+
+	character = char
+	humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+
+	if flying then
+		bodyVelocity.Parent = humanoidRootPart
+	end
+
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Died:Connect(function()
+			flying = false
+			bodyVelocity.Parent = nil
+			toggleBtn.Text = "Fly: OFF"
+			TweenService:Create(toggleBtn, TweenInfo.new(0.25), {BackgroundColor3 = Color3.fromRGB(55, 55, 55)}):Play()
+		end)
+	end
+end
+player.CharacterAdded:Connect(onCharacterAdded)
+onCharacterAdded(character)
+
+-- Física do voo
+RunService.Heartbeat:Connect(function()
+	if flying and humanoidRootPart then
+		local camCFrame = workspace.CurrentCamera.CFrame
+		local moveDirection = Vector3.new()
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection += camCFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection -= camCFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection -= camCFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection += camCFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection += Vector3.new(0, 1, 0) end
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection -= Vector3.new(0, 1, 0) end
+
+		if moveDirection.Magnitude > 0 then
+			bodyVelocity.Velocity = moveDirection.Unit * flySpeed
+		else
+			bodyVelocity.Velocity = Vector3.new()
+		end
+	else
+		bodyVelocity.Velocity = Vector3.new()
+	end
+end)
+
+
+
+end)
+
+
+
+Section:CreateButton("Attack aura", function()
+
+
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local ATTACK_DISTANCE = 11
+local ATTACK_COOLDOWN = 0.5
+
+local lastAttackTime = 0
+local currentCharacter = nil
+local currentHumanoid = nil
+local currentBackpack = nil
+
+-- Equipa automaticamente a primeira Tool disponível
+local function equipTool()
+	if not currentCharacter then return end
+	if not currentCharacter:FindFirstChildOfClass("Tool") then
+		local tool = currentBackpack and currentBackpack:FindFirstChildOfClass("Tool")
+		if tool then
+			tool.Parent = currentCharacter
+		end
+	end
+end
+
+-- Ativa a Tool
+local function attack()
+	local tool = currentCharacter and currentCharacter:FindFirstChildOfClass("Tool")
+	if tool and tool:FindFirstChild("Handle") then
+		tool:Activate()
+	end
+end
+
+-- Verifica o jogador mais próximo
+local function getClosestTarget()
+	if not currentCharacter then return nil end
+
+	local myRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
+	if not myRoot then return nil end
+
+	local closest = nil
+	local shortestDistance = ATTACK_DISTANCE
+
+	for _, otherPlayer in pairs(Players:GetPlayers()) do
+		if otherPlayer ~= LocalPlayer and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local theirRoot = otherPlayer.Character.HumanoidRootPart
+			local distance = (myRoot.Position - theirRoot.Position).Magnitude
+			if distance <= shortestDistance then
+				closest = otherPlayer
+				shortestDistance = distance
+			end
+		end
+	end
+
+	return closest
+end
+
+-- Lógica principal de ataque
+RunService.RenderStepped:Connect(function()
+	if not currentCharacter or not currentCharacter:FindFirstChild("HumanoidRootPart") then return end
+
+	local now = tick()
+	local target = getClosestTarget()
+
+	if target and now - lastAttackTime >= ATTACK_COOLDOWN then
+		equipTool()
+		attack()
+		lastAttackTime = now
+	end
+end)
+
+-- Atualiza variáveis quando o personagem for recriado
+local function onCharacterAdded(char)
+	currentCharacter = char
+	currentHumanoid = char:WaitForChild("Humanoid")
+	currentBackpack = LocalPlayer:WaitForChild("Backpack")
+end
+
+-- Inicializa com personagem atual
+LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+-- Se já existe personagem ao iniciar
+if LocalPlayer.Character then
+	onCharacterAdded(LocalPlayer.Character)
+end
+
+
+
+end)
+
+
+
+
+
+local savedPos = nil
+local speed = 38
+
+local Section = Window:NewSection("Teleports")
+
+Section:CreateButton("Save Base Position", function()
+    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        savedPos = hrp.Position
+    end
+end)
+
+
+Section:CreateButton("Go to Saved Position", function()
+
+
+
+	local char = lp.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+	if savedPos and hrp and humanoid then
+		humanoid.UseJumpPower = true
+		humanoid.JumpPower = 77 -- pulo mais alto
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+
+		task.wait(0.1)
+
+		local distance = (hrp.Position - savedPos).Magnitude
+		local duration = distance / speed
+
+		local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+		local cf = CFrame.new(savedPos + Vector3.new(0, 8, 0)) -- voo mais alto também
+		local tween = ts:Create(hrp, tweenInfo, {CFrame = cf})
+		tween:Play()
+	end
+
+
+
+
+
+
+end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+local Section = Window:NewSection("ESP")
+
+Section:CreateButton("Timer ALL bases", function()
+
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+-- Defina aqui o nome exato do objeto que quer monitorar
+local targetName = "Main"
+
+-- Defina aqui o nome exato do TextLabel (ou TextBox) que tem o timer dentro do objeto
+local timerTextLabelName = "RemainingTime"
+
+local espObjects = {}
+
+local function findTimerText(obj)
+    -- Busca direta pelo nome exato do TextLabel/TextBox dentro do objeto
+    local candidate = obj:FindFirstChild(timerTextLabelName, true) -- true para busca recursiva
+    if candidate and (candidate:IsA("TextLabel") or candidate:IsA("TextBox")) then
+        if candidate.Text and #candidate.Text > 0 then
+            local num = tonumber(candidate.Text:match("%d+%.?%d*"))
+            if num then
+                return candidate
+            end
+        end
+    end
+    return nil
+end
+
+local function createESP(obj, textSource)
+    if obj:FindFirstChild("TextTimerESP") then
+        return obj.TextTimerESP
+    end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "TextTimerESP"
+    billboard.Adornee = obj
+    billboard.Size = UDim2.new(0, 150, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, (obj.Size and obj.Size.Y or 3) + 1, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = obj
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 0.5
+    textLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+    textLabel.TextColor3 = Color3.new(1, 1, 0)
+    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.TextScaled = true
+    textLabel.Parent = billboard
+
+    return billboard
+end
+
+local function removeESP(obj)
+    if obj:FindFirstChild("TextTimerESP") then
+        obj.TextTimerESP:Destroy()
+    end
+end
+
+local function updateESP()
+    for obj, _ in pairs(espObjects) do
+        if not obj:IsDescendantOf(Workspace) then
+            removeESP(obj)
+            espObjects[obj] = nil
+        else
+            local textSource = findTimerText(obj)
+            if not textSource then
+                removeESP(obj)
+                espObjects[obj] = nil
+            end
+        end
+    end
+
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name == targetName then
+            local textSource = findTimerText(obj)
+            if textSource and not espObjects[obj] then
+                createESP(obj, textSource)
+                espObjects[obj] = true
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    for obj, _ in pairs(espObjects) do
+        local esp = obj:FindFirstChild("TextTimerESP")
+        if esp then
+            local textSource = findTimerText(obj)
+            local textLabel = esp:FindFirstChildOfClass("TextLabel")
+            if textSource and textLabel then
+                textLabel.Text = string.format("%s\n%s", obj.Name, textSource.Text)
+                esp.Enabled = true
+            else
+                esp.Enabled = false
+            end
+        end
+    end
+end)
+
+while true do
+    updateESP()
+    wait(2)
+end
+
+
+end)
+
+Section:CreateButton("Name", function()
+
+local c = workspace.CurrentCamera
+local ps = game:GetService("Players")
+local lp = ps.LocalPlayer
+local rs = game:GetService("RunService")
+
+local function esp(p,cr)
+    local h = cr:WaitForChild("Humanoid")
+    local hrp = cr:WaitForChild("Head")
+
+    local text = Drawing.new("Text")
+    text.Visible = false
+    text.Center = true
+    text.Outline = false 
+    text.Font = 3
+    text.Size = 16.16
+    text.Color = Color3.new(170,170,170)
+
+    local conection
+    local conection2
+    local conection3
+
+    local function dc()
+        text.Visible = false
+        text:Remove()
+        if conection then
+            conection:Disconnect()
+            conection = nil 
+        end
+        if conection2 then
+            conection2:Disconnect()
+            conection2 = nil 
+        end
+        if conection3 then
+            conection3:Disconnect()
+            conection3 = nil 
+        end
+    end
+
+    conection2 = cr.AncestryChanged:Connect(function(_,parent)
+        if not parent then
+            dc()
+        end
+    end)
+
+    conection3 = h.HealthChanged:Connect(function(v)
+        if (v<=0) or (h:GetState() == Enum.HumanoidStateType.Dead) then
+            dc()
+        end
+    end)
+
+    conection = rs.RenderStepped:Connect(function()
+        local hrp_pos,hrp_onscreen = c:WorldToViewportPoint(hrp.Position)
+        if hrp_onscreen then
+            text.Position = Vector2.new(hrp_pos.X, hrp_pos.Y - 27)
+            text.Text = "[ "..p.Name.." ]"
+            text.Visible = true
+        else
+            text.Visible = false
+        end
+    end)
+end
+
+local function p_added(p)
+    if p.Character then
+        esp(p,p.Character)
+    end
+    p.CharacterAdded:Connect(function(cr)
+        esp(p,cr)
+    end)
+end
+
+for i,p in next, ps:GetPlayers() do 
+    if p ~= lp then
+        p_added(p)
+    end
+end
+
+ps.PlayerAdded:Connect(p_added)
+
+end)
+
+Section:CreateButton("Skeleton", function()
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Blissful4992/ESPs/main/UniversalSkeleton.lua"))()
+
+
+local Skeletons = {}
+for _, Player in next, game.Players:GetChildren() do
+    table.insert(Skeletons, Library:NewSkeleton(Player, true));
+end
+game.Players.PlayerAdded:Connect(function(Player)
+    table.insert(Skeletons, Library:NewSkeleton(Player, true));
+end)
+
+end)
+
+local Section = Window:NewSection("Flings")
+
+Section:CreateButton("WalkFling", function()
+
+loadstring(game:HttpGet("https://pastefy.app/Vf5POrA6/raw"))()
+
+end)
+
+
+local Section = Window:NewSection("Extras")
+
+Section:CreateButton("Server Hope", function()
+
+local module = loadstring(game:HttpGet"https://raw.githubusercontent.com/LeoKholYt/roblox/main/lk_serverhop.lua")()
+
+module:Teleport(game.PlaceId)
+
+end)
+
+Section:CreateButton("Rejoin", function()
+
+local player = game.Players.LocalPlayer
+local gamePlaceId = game.PlaceId
+local teleportService = game:GetService("TeleportService")
+teleportService:Teleport(gamePlaceId, player)
+
+end)
+
+local Window = Library:NewWindow("See my team")
+local Section = Window:NewSection("Team")
+
+Section:CreateButton("TGMANKASKE", function()
+print("tgmankaske")
+
+end)
+
+Section:CreateButton("Davitrollz", function()
+print("Davitrollz")
+
+end)
