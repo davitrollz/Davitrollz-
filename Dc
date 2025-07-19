@@ -1,0 +1,68 @@
+--// ESP Wizard Menu with Animated Border and Distance //--
+
+local TweenService = game:GetService("TweenService") local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer local Camera = workspace.CurrentCamera
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))() local Window = Library:NewWindow("ESP Utility") local Main = Window:NewSection("Main")
+
+-- Settings local espEnabled = false local aimbotEnabled = false local espObjects = {}
+
+-- Utility: Create border ESP local function createESPBox(target) local box = Drawing.new("Square") box.Visible = true box.Transparency = 1 box.Thickness = 2 box.Filled = false box.Color = Color3.fromRGB(255, 0, 0) espObjects[target] = box
+
+local text = Drawing.new("Text")
+text.Visible = true
+text.Size = 13
+text.Center = true
+text.Outline = true
+text.Color = Color3.new(1, 1, 1)
+espObjects[target .. "_text"] = text
+
+-- Color tweening
+coroutine.wrap(function()
+    local colors = {
+        Color3.fromRGB(255, 60, 0),
+        Color3.fromRGB(255, 0, 0)
+    }
+    local index = 1
+    while espEnabled and box do
+        local nextIndex = index % #colors + 1
+        local tween = TweenService:Create(box, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Color = colors[nextIndex] })
+        tween:Play()
+        tween.Completed:Wait()
+        index = nextIndex
+    end
+end)()
+
+end
+
+-- Update ESP positions and distances local function updateESP() for player, box in pairs(espObjects) do if typeof(player) == "Instance" and player:IsA("Model") then local hrp = player:FindFirstChild("HumanoidRootPart") local hum = player:FindFirstChildOfClass("Humanoid") if hrp and hum and hum.Health > 0 then local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position) if onScreen then local size = Vector2.new(50, 100) box.Size = size box.Position = Vector2.new(pos.X - size.X / 2, pos.Y - size.Y / 2) box.Visible = true
+
+local dist = math.floor((hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+                local text = espObjects[player .. "_text"]
+                if text then
+                    text.Position = Vector2.new(pos.X, pos.Y - 60)
+                    text.Text = tostring(dist) .. "m"
+                    text.Visible = true
+                end
+            else
+                box.Visible = false
+                local text = espObjects[player .. "_text"]
+                if text then text.Visible = false end
+            end
+        end
+    end
+end
+
+end
+
+-- Clear ESP local function clearESP() for _, obj in pairs(espObjects) do if typeof(obj) == "Instance" or typeof(obj) == "table" then pcall(function() obj.Visible = false obj:Remove() end) end end espObjects = {} end
+
+-- Aimbot Logic local function getClosestEnemy() local closest = nil local shortest = math.huge for _, v in pairs(workspace:GetChildren()) do if v:IsA("Model") and v.Name == "soldier_model" and not v:FindFirstChild("friendly_marker") then local hrp = v:FindFirstChild("HumanoidRootPart") if hrp then local dist = (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude if dist < shortest then shortest = dist closest = hrp end end end end return closest end
+
+-- Wizard Toggles Main:CreateToggle("ESP", false, function(state) espEnabled = state if state then task.wait(2) -- delay to allow enemies to load for _, v in pairs(workspace:GetChildren()) do if v:IsA("Model") and v.Name == "soldier_model" and not v:FindFirstChild("friendly_marker") then createESPBox(v) end end else clearESP() end end)
+
+Main:CreateToggle("Aimbot", false, function(state) aimbotEnabled = state end)
+
+-- WalkSpeed Menu Main:CreateButton("WalkSpeed Menu", function() local speedWindow = Library:NewWindow("WalkSpeed") local speedSection = speedWindow:NewSection("Choose Speed") for i = 16, 100, 4 do speedSection:CreateButton(tostring(i), function() LocalPlayer.Character.Humanoid.WalkSpeed = i end) end end)
+
+-- Update Loop RunService = game:GetService("RunService") RunService.RenderStepped:Connect(function() if espEnabled then updateESP() end if aimbotEnabled then local target = getClosestEnemy() if target then Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position) end end end)
+
