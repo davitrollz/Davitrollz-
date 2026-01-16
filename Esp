@@ -1,0 +1,110 @@
+--// SIMPLE DRAWING ESP (ENEMIES ONLY)
+
+local ESP = {
+    Enabled = false,
+    Boxes = true,
+    Names = false,
+    Tracers = false,
+    TeamMates = false,
+    Players = false,
+    Color = Color3.fromRGB(255,0,0),
+    Objects = {},
+    Overrides = {}
+}
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local function isEnemy(model)
+    return model
+        and model:IsA("Model")
+        and model.Name == "soldier_model"
+        and not model:FindFirstChild("friendly_marker")
+end
+
+local function newBox()
+    local q = Drawing.new("Quad")
+    q.Visible = false
+    q.Thickness = 2
+    q.Filled = false
+    return q
+end
+
+local function remove(obj)
+    if ESP.Objects[obj] then
+        ESP.Objects[obj].Visible = false
+        ESP.Objects[obj]:Remove()
+        ESP.Objects[obj] = nil
+    end
+end
+
+local function add(model)
+    if ESP.Objects[model] then return end
+    local root = model:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    ESP.Objects[model] = newBox()
+end
+
+RunService.RenderStepped:Connect(function()
+    if not ESP.Enabled then
+        for _,b in pairs(ESP.Objects) do b.Visible = false end
+        return
+    end
+
+    for m,b in pairs(ESP.Objects) do
+        if not m.Parent then
+            remove(m)
+            continue
+        end
+
+        local r = m:FindFirstChild("HumanoidRootPart")
+        if not r then b.Visible=false continue end
+
+        local cf = r.CFrame
+        local size = Vector3.new(4,6,0)
+
+        local tl = Camera:WorldToViewportPoint((cf*CFrame.new( size.X/2,  size.Y/2,0)).p)
+        local tr = Camera:WorldToViewportPoint((cf*CFrame.new(-size.X/2,  size.Y/2,0)).p)
+        local bl = Camera:WorldToViewportPoint((cf*CFrame.new( size.X/2, -size.Y/2,0)).p)
+        local br = Camera:WorldToViewportPoint((cf*CFrame.new(-size.X/2, -size.Y/2,0)).p)
+
+        b.PointA = Vector2.new(tr.X,tr.Y)
+        b.PointB = Vector2.new(tl.X,tl.Y)
+        b.PointC = Vector2.new(bl.X,bl.Y)
+        b.PointD = Vector2.new(br.X,br.Y)
+
+        if ESP.Overrides.GetColor then
+            b.Color = ESP.Overrides.GetColor(m)
+        else
+            b.Color = ESP.Color
+        end
+
+        b.Visible = true
+    end
+end)
+
+workspace.DescendantAdded:Connect(function(v)
+    if ESP.Enabled and isEnemy(v) then
+        task.wait(0.2)
+        add(v)
+    end
+end)
+
+function ESP:Toggle(v)
+    self.Enabled = v
+    if v then
+        for _,m in pairs(workspace:GetDescendants()) do
+            if isEnemy(m) then
+                add(m)
+            end
+        end
+    else
+        for _,b in pairs(self.Objects) do
+            b.Visible = false
+        end
+    end
+end
+
+return ESP
